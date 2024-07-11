@@ -1,6 +1,8 @@
 package main
 
 import (
+	"StarNote-editor/InitModules"
+	"StarNote-editor/Pages"
 	"StarNote-editor/Support"
 	"bufio"
 	"fmt"
@@ -43,71 +45,28 @@ func main() {
 
 	app := tview.NewApplication().EnableMouse(true)
 	pages := tview.NewPages()
+	textArea := InitModules.InitTextArea(string(content), filepath)
 
-	textArea := tview.NewTextArea().SetPlaceholder("Type something to here...").SetText(string(content), false)
-	textArea.SetTitle(filepath).SetBorder(true)
+	helpInfo := tview.NewTextView().SetText("[F1] Help, [Ctrl-S] Save, [Ctrl-/] Settings")
+	textPosition := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignRight)
 
-	helpInfo :=
-		tview.NewTextView().
-			SetText(" Press F1 for help, press Ctrl-C to exit, press Ctrl-S to save")
-
-	textPosition := tview.NewTextView().
-		SetDynamicColors(true).
-		SetTextAlign(tview.AlignRight)
-
-	updateInfos := func() {
-		fromRow, fromColumn, toRow, toColumn := textArea.GetCursor()
-		if fromRow == toRow && fromColumn == toColumn {
-			textPosition.SetText(fmt.Sprintf("Row: [yellow]%d[white], Column: [yellow]%d ", fromRow, fromColumn))
-		} else {
-			textPosition.SetText(fmt.Sprintf("[red]From[white] Row: [yellow]%d[white], Column: [yellow]%d[white] - [red]To[white] Row: [yellow]%d[white], To Column: [yellow]%d ", fromRow, fromColumn, toRow, toColumn))
-		}
-	}
-
+	updateInfos := InitModules.InitUpdateInfos(textArea, textPosition)
 	textArea.SetMovedFunc(updateInfos)
 	updateInfos()
 
-	mainView := tview.NewGrid().
-		SetRows(0, 1).
-		AddItem(textArea, 0, 0, 1, 2, 0, 0, true).
-		AddItem(helpInfo, 1, 0, 1, 1, 0, 0, false).
-		AddItem(textPosition, 1, 1, 1, 1, 0, 0, false)
+	mainView := InitModules.InitMainView(textArea, helpInfo, textPosition)
 
-	help1 := Support.NewHelpText(Support.HelpText1)
-	help2 := Support.NewHelpText(Support.HelpText2)
-	help3 := Support.NewHelpText(Support.HelpText3)
-
-	help := tview.NewFrame(help1).SetBorders(1, 1, 0, 0, 2, 2)
-
-	help.SetBorder(true).
-		SetTitle("Help").
-		SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-			if event.Key() == tcell.KeyEscape {
-				pages.SwitchToPage("main")
-				return nil
-			} else if event.Key() == tcell.KeyEnter {
-				switch {
-				case help.GetPrimitive() == help1:
-					help.SetPrimitive(help2)
-				case help.GetPrimitive() == help2:
-					help.SetPrimitive(help3)
-				case help.GetPrimitive() == help3:
-					help.SetPrimitive(help1)
-				}
-				return nil
-			}
-			return event
-		})
-
-	pages.AddAndSwitchToPage("main", mainView, true).
-		AddPage("help", tview.NewGrid().
-			SetColumns(0, 64, 0).
-			SetRows(0, 22, 0).
-			AddItem(help, 1, 1, 1, 1, 0, 0, true), true, false)
+	Pages.InitSettingsPage(pages)
+	Pages.InitHelpPage(pages, mainView)
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyF1 {
-			pages.ShowPage("help") //TODO: Check when clicking outside help window with the mouse. Then clicking help again.
+			pages.ShowPage("help")
+			return nil
+		}
+
+		if event.Key() == tcell.KeyF2 {
+			pages.ShowPage("settings")
 			return nil
 		}
 
